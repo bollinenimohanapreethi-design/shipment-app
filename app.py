@@ -5,12 +5,10 @@ import joblib
 # Load trained model
 model = joblib.load("model.pkl")
 
-# App title
 st.title("📦 Shipment Delivery Prediction App")
-
-# User inputs
 st.header("Enter Shipment Details")
 
+# User inputs
 warehouse_block = st.selectbox("Warehouse Block", ["A", "B", "C", "D", "F"])
 mode_of_shipment = st.selectbox("Mode of Shipment", ["Flight", "Road", "Ship"])
 customer_care_calls = st.number_input("Customer Care Calls", min_value=0, max_value=10, value=2)
@@ -22,34 +20,28 @@ gender = st.selectbox("Customer Gender", ["Male", "Female"])
 discount_offered = st.number_input("Discount Offered (%)", min_value=0, max_value=100, value=10)
 weight_in_gms = st.number_input("Weight (in grams)", min_value=1, value=500)
 
-# Add Threshold Slider
+# Threshold slider
 threshold = st.slider("Prediction Threshold", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
 
-# Prediction button
 if st.button("Predict"):
-    # Compute cost-to-weight ratio
     cost_to_weight_ratio = cost_of_product / (weight_in_gms + 1e-6)
 
-    # One-hot encode warehouse block (all included)
-    warehouse_block_A = 1 if warehouse_block == "A" else 0
+    # One-hot encode warehouse block - Drop 'A' as base case, so no column for A
     warehouse_block_B = 1 if warehouse_block == "B" else 0
     warehouse_block_C = 1 if warehouse_block == "C" else 0
     warehouse_block_D = 1 if warehouse_block == "D" else 0
     warehouse_block_F = 1 if warehouse_block == "F" else 0
 
-    # One-hot encode mode of shipment (all included)
-    mode_of_shipment_Flight = 1 if mode_of_shipment == "Flight" else 0
+    # One-hot encode mode of shipment - Drop 'Flight' column as base case
     mode_of_shipment_Road = 1 if mode_of_shipment == "Road" else 0
     mode_of_shipment_Ship = 1 if mode_of_shipment == "Ship" else 0
 
-    # Encode other categorical values
     importance_map = {"Low": 0, "Medium": 1, "High": 2}
     gender_map = {"Male": 0, "Female": 1}
 
     importance_encoded = importance_map[product_importance]
     gender_encoded = gender_map[gender]
 
-    # Construct input DataFrame with correct column names and order
     input_data = pd.DataFrame([[ 
         customer_care_calls,
         customer_rating,
@@ -59,26 +51,21 @@ if st.button("Predict"):
         gender_encoded,
         discount_offered,
         weight_in_gms,
-        warehouse_block_A,
         warehouse_block_B,
         warehouse_block_C,
         warehouse_block_D,
         warehouse_block_F,
-        mode_of_shipment_Flight,
         mode_of_shipment_Road,
         mode_of_shipment_Ship,
         cost_to_weight_ratio
     ]], columns=[
         'Customer_care_calls', 'Customer_rating', 'Cost_of_the_Product', 'Prior_purchases', 'Product_importance', 'Gender',
-        'Discount_offered', 'Weight_in_gms', 'Warehouse_block_A', 'Warehouse_block_B', 'Warehouse_block_C',
-        'Warehouse_block_D', 'Warehouse_block_F', 'Mode_of_Shipment_Flight', 'Mode_of_Shipment_Road',
+        'Discount_offered', 'Weight_in_gms', 'Warehouse_block_B', 'Warehouse_block_C',
+        'Warehouse_block_D', 'Warehouse_block_F', 'Mode_of_Shipment_Road',
         'Mode_of_Shipment_Ship', 'Cost_to_Weight_ratio'
     ])
 
-    # Get probability for the positive class (On Time)
     probability = model.predict_proba(input_data)[0][1]
-    
-    # Apply the threshold set by user for prediction
     prediction = 1 if probability >= threshold else 0
 
     st.subheader("Prediction Result")
@@ -93,4 +80,4 @@ if st.button("Predict"):
     st.info(f"Threshold used: {threshold}")
 
 st.markdown("---")
-st.markdown("**Tune the threshold slider above to control how sensitive the model should be when predicting late vs on-time shipments.**")
+st.markdown("**Note:** The selected threshold allows you to adjust how sensitive the prediction is.")
