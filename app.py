@@ -20,19 +20,16 @@ gender = st.selectbox("Customer Gender", ["Male", "Female"])
 discount_offered = st.number_input("Discount Offered (%)", min_value=0, max_value=100, value=10)
 weight_in_gms = st.number_input("Weight (in grams)", min_value=1, value=500)
 
-# Threshold slider
-threshold = st.slider("Prediction Threshold", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
-
 if st.button("Predict"):
     cost_to_weight_ratio = cost_of_product / (weight_in_gms + 1e-6)
 
-    # One-hot encode warehouse block - Drop 'A' as base case, so no column for A
+    # One-hot encoding for warehouse block (drop 'A' as base)
     warehouse_block_B = 1 if warehouse_block == "B" else 0
     warehouse_block_C = 1 if warehouse_block == "C" else 0
     warehouse_block_D = 1 if warehouse_block == "D" else 0
     warehouse_block_F = 1 if warehouse_block == "F" else 0
 
-    # One-hot encode mode of shipment - Drop 'Flight' column as base case
+    # One-hot encoding for mode of shipment (drop 'Flight' as base)
     mode_of_shipment_Road = 1 if mode_of_shipment == "Road" else 0
     mode_of_shipment_Ship = 1 if mode_of_shipment == "Ship" else 0
 
@@ -66,7 +63,15 @@ if st.button("Predict"):
     ])
 
     probability = model.predict_proba(input_data)[0][1]
-    prediction = 1 if probability >= threshold else 0
+
+    # Custom threshold logic
+    if probability < 0.4:
+        prediction = 0
+    elif probability > 0.67:
+        prediction = 1
+    else:
+        # Either predict 0 or handle uncertain case differently
+        prediction = 0
 
     st.subheader("Prediction Result")
     if prediction == 1:
@@ -76,8 +81,8 @@ if st.button("Predict"):
 
     st.subheader("Prediction Probability")
     st.write(f"On-time probability: {probability*100:.2f}%")
-    st.write(f"Delay probability: {(1-probability)*100:.2f}%")
-    st.info(f"Threshold used: {threshold}")
+    st.write(f"Delay probability: {(1 - probability)*100:.2f}%")
+    st.info("Thresholds: Probability <0.4 = Not on time; >0.67 = On time; otherwise treated as Not on time.")
 
 st.markdown("---")
-st.markdown("**Note:** The selected threshold allows you to adjust how sensitive the prediction is.")
+st.markdown("Adjust shipment details and click Predict to see results with custom thresholding.")
