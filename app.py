@@ -21,17 +21,20 @@ discount_offered = st.number_input("Discount Offered (%)", min_value=0, max_valu
 weight_in_gms = st.number_input("Weight (in grams)", min_value=1, value=500)
 
 if st.button("Predict"):
+
     cost_to_weight_ratio = cost_of_product / (weight_in_gms + 1e-6)
 
-    # One-hot encoding for warehouse block (drop 'A' as base)
+    # One-hot encoding for warehouse block (A, B, C, D, F)
+    warehouse_block_A = 1 if warehouse_block == "A" else 0
     warehouse_block_B = 1 if warehouse_block == "B" else 0
     warehouse_block_C = 1 if warehouse_block == "C" else 0
     warehouse_block_D = 1 if warehouse_block == "D" else 0
     warehouse_block_F = 1 if warehouse_block == "F" else 0
 
-    # One-hot encoding for mode of shipment (drop 'Flight' as base)
-    mode_of_shipment_Road = 1 if mode_of_shipment == "Road" else 0
-    mode_of_shipment_Ship = 1 if mode_of_shipment == "Ship" else 0
+    # One-hot encoding for mode of shipment (Flight, Road, Ship)
+    mode_flight = 1 if mode_of_shipment == "Flight" else 0
+    mode_road   = 1 if mode_of_shipment == "Road" else 0
+    mode_ship   = 1 if mode_of_shipment == "Ship" else 0
 
     importance_map = {"Low": 0, "Medium": 1, "High": 2}
     gender_map = {"Male": 0, "Female": 1}
@@ -39,7 +42,8 @@ if st.button("Predict"):
     importance_encoded = importance_map[product_importance]
     gender_encoded = gender_map[gender]
 
-    input_data = pd.DataFrame([[ 
+    # Prepare input data
+    input_data = pd.DataFrame([[
         customer_care_calls,
         customer_rating,
         cost_of_product,
@@ -48,29 +52,50 @@ if st.button("Predict"):
         gender_encoded,
         discount_offered,
         weight_in_gms,
+
+        warehouse_block_A,
         warehouse_block_B,
         warehouse_block_C,
         warehouse_block_D,
         warehouse_block_F,
-        mode_of_shipment_Road,
-        mode_of_shipment_Ship,
+
+        mode_flight,
+        mode_road,
+        mode_ship,
+
         cost_to_weight_ratio
     ]], columns=[
-        'Customer_care_calls', 'Customer_rating', 'Cost_of_the_Product', 'Prior_purchases', 'Product_importance', 'Gender',
-        'Discount_offered', 'Weight_in_gms', 'Warehouse_block_B', 'Warehouse_block_C',
-        'Warehouse_block_D', 'Warehouse_block_F', 'Mode_of_Shipment_Road',
-        'Mode_of_Shipment_Ship', 'Cost_to_Weight_ratio'
+        'Customer_care_calls',
+        'Customer_rating',
+        'Cost_of_the_Product',
+        'Prior_purchases',
+        'Product_importance',
+        'Gender',
+        'Discount_offered',
+        'Weight_in_gms',
+
+        'Warehouse_block_A',
+        'Warehouse_block_B',
+        'Warehouse_block_C',
+        'Warehouse_block_D',
+        'Warehouse_block_F',
+
+        'Mode_of_Shipment_Flight',
+        'Mode_of_Shipment_Road',
+        'Mode_of_Shipment_Ship',
+
+        'Cost_to_Weight_ratio'
     ])
 
+    # Predict probability
     probability = model.predict_proba(input_data)[0][1]
 
-    # Custom threshold logic
+    # Threshold logic
     if probability < 0.4:
         prediction = 0
     elif probability > 0.67:
         prediction = 1
     else:
-        # Either predict 0 or handle uncertain case differently
         prediction = 0
 
     st.subheader("Prediction Result")
@@ -82,7 +107,8 @@ if st.button("Predict"):
     st.subheader("Prediction Probability")
     st.write(f"On-time probability: {probability*100:.2f}%")
     st.write(f"Delay probability: {(1 - probability)*100:.2f}%")
-    st.info("Thresholds: Probability <0.4 = Not on time; >0.67 = On time; otherwise treated as Not on time.")
+
+    st.info("Thresholds: <0.4 = Not on time, >0.67 = On time, others = Not on time")
 
 st.markdown("---")
 st.markdown("Adjust shipment details and click Predict to see results with custom thresholding.")
